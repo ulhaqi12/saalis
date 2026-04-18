@@ -186,8 +186,45 @@ make typecheck-sidecar    # mypy sidecar
 make all                  # fmt + lint + typecheck + test-all
 ```
 
+---
+
+## LangGraph Integration
+
+`ArbitrationNode` is a drop-in LangGraph node. It requires no `langgraph` import — just an async callable that reads from and writes to graph state.
+
+```python
+from typing import TypedDict
+from langgraph.graph import StateGraph, END
+from saalis.integrations.langgraph import ArbitrationNode
+from saalis.strategy import WeightedVote
+
+class AgentState(TypedDict):
+    question: str
+    proposals: list
+    agents: list
+    verdict: object
+
+node = ArbitrationNode(strategies=[WeightedVote()])
+
+graph = StateGraph(AgentState)
+graph.add_node("arbitrate", node)
+graph.set_entry_point("arbitrate")
+graph.add_edge("arbitrate", END)
+app = graph.compile()
+
+result = await app.ainvoke({
+    "question": "Which approach is better?",
+    "agents": [{"id": "a1", "name": "GPT-4o", "weight": 0.8}],
+    "proposals": [{"agent_id": "a1", "content": "Approach A", "confidence": 0.9}],
+})
+print(result["verdict"].render("markdown"))
+```
+
+All state keys are configurable via `question_key`, `proposals_key`, `agents_key`, `verdict_key`. State values can be raw dicts or Pydantic objects — both accepted.
+
+---
+
 ## Roadmap
 
-- **M6** — LangGraph adapter
 - **M7** — CrewAI adapter
 - **M8** — PyPI release
