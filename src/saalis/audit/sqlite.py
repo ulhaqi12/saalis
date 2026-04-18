@@ -3,9 +3,9 @@ from __future__ import annotations
 import json
 from datetime import UTC, datetime
 
-from sqlalchemy import Column, DateTime, String, Text, select
+from sqlalchemy import DateTime, String, Text, select
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
-from sqlalchemy.orm import DeclarativeBase
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 from saalis.audit.base import AuditStore
 from saalis.models import AuditEvent, AuditEventType
@@ -18,10 +18,10 @@ class _Base(DeclarativeBase):
 class _AuditRow(_Base):
     __tablename__ = "audit_events"
 
-    id = Column(String, primary_key=True)
-    event_type = Column(String, nullable=False, index=True)
-    payload = Column(Text, nullable=False)
-    timestamp = Column(DateTime(timezone=True), nullable=False, index=True)
+    id: Mapped[str] = mapped_column(String, primary_key=True)
+    event_type: Mapped[str] = mapped_column(String, nullable=False, index=True)
+    payload: Mapped[str] = mapped_column(Text, nullable=False)
+    timestamp: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, index=True)
 
 
 class SQLiteAuditStore(AuditStore):
