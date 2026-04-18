@@ -72,7 +72,25 @@ arb = Arbitrator(strategies=[WeightedVote()], policy_engine=engine)
 | Strategy | Description |
 |---|---|
 | `WeightedVote` | Scores proposals by `agent.weight × confidence`, picks highest |
+| `LLMJudge` | Calls an LLM to adjudicate; falls back to `WeightedVote` on failure |
 | `DeferToHuman` | Returns a `pending_human` verdict; resolution requires a callback |
+
+### LLMJudge
+
+```python
+from saalis.strategy import LLMJudge
+
+arb = Arbitrator(
+    strategies=[LLMJudge(
+        model="gpt-4o",          # any OpenAI-compatible model
+        base_url=None,           # override for Ollama, Groq, etc.
+        api_key=None,            # falls back to OPENAI_API_KEY env var
+        max_retries=3,
+    )],
+)
+verdict = await arb.arbitrate(decision)
+print(verdict.render("markdown"))  # human-readable audit output
+```
 
 ## Audit stores
 
@@ -92,9 +110,16 @@ make typecheck   # mypy
 make all         # fmt + lint + typecheck + test
 ```
 
+## Verdict rendering
+
+```python
+verdict.render()           # plain text paragraph
+verdict.render("markdown") # structured markdown (for audit logs, Slack, docs)
+verdict.render("json")     # full JSON
+```
+
 ## Roadmap
 
-- **M4** — `LLMJudge` strategy (openai SDK, OpenAI-compatible)
 - **M5** — HTTP sidecar (FastAPI: `/resolve`, `/audit`, `/human-response`)
 - **M6** — LangGraph adapter
 - **M7** — CrewAI adapter
