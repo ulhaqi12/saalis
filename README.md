@@ -8,7 +8,6 @@
 
 Governance and evidence layer for multi-agent AI decision arbitration.
 
-> *ثالث* (sālis) — Urdu for "the third one" or "the arbitrator"; the impartial party that resolves a dispute.
 
 When multiple AI agents produce conflicting outputs, Saalis provides configurable resolution strategies, policy enforcement, explainability, and audit logging.
 
