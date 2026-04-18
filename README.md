@@ -1,4 +1,4 @@
-# saalis
+# saalis — ثالث
 
 [![CI](https://github.com/ulhaqi12/saalis/actions/workflows/ci.yml/badge.svg)](https://github.com/ulhaqi12/saalis/actions/workflows/ci.yml)
 [![PyPI version](https://img.shields.io/pypi/v/saalis.svg)](https://pypi.org/project/saalis/)
@@ -7,6 +7,8 @@
 [![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 
 Governance and evidence layer for multi-agent AI decision arbitration.
+
+> *ثالث* (sālis) — Urdu for "the third one" or "the arbitrator"; the impartial party that resolves a dispute.
 
 When multiple AI agents produce conflicting outputs, Saalis provides configurable resolution strategies, policy enforcement, explainability, and audit logging.
 
