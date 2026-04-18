@@ -253,10 +253,8 @@ Sync `_run()` is also available for non-async contexts.
 - [ ] **Protocol interoperability** — native MCP server and A2A agent endpoint
 - [ ] **Advanced arbitration** — multi-model debate, adversarial courtroom, ensemble strategies, hallucination detection
 - [ ] **Security hardening** — proposal sanitization, signed agent identity, rate limiting, hash-chained audit logs
-- [ ] **OpenTelemetry** — full GenAI semantic convention spans, distributed trace propagation, Grafana dashboard
-- [ ] **Compliance profiles** — EU AI Act, NIST AI RMF, ISO 42001 — declarative, audit-ready out of the box
+- [ ] **OpenTelemetry** — GenAI semantic convention spans, distributed trace propagation, Grafana dashboard
 - [ ] **PostgreSQL + pgvector** — production-grade backend, semantic search over past decisions, persistent agent profiles
-- [ ] **Enterprise: RBAC + multi-tenancy** — JWT/OIDC auth, role-based access, per-tenant isolation, admin web UI
 - [ ] **Evaluation framework** — benchmark harness, A/B shadow testing, human feedback loop
 - [ ] **More framework adapters** — Microsoft Agent Framework, Google ADK, OpenAI Agents SDK, Pydantic AI, n8n, Dify
 - [ ] **CLI + YAML config** — `saalis serve`, `saalis replay`, `saalis bench`, declarative `saalis.yaml`
