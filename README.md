@@ -224,7 +224,45 @@ All state keys are configurable via `question_key`, `proposals_key`, `agents_key
 
 ---
 
+## CrewAI Integration
+
+`ArbitrationTool` duck-types CrewAI's `BaseTool` interface (`name`, `description`, `_run`, `_arun`) without importing `crewai`. Attach it to any CrewAI agent or call it directly.
+
+```python
+from crewai import Agent, Task, Crew
+from saalis.integrations.crewai import ArbitrationTool
+from saalis.strategy import WeightedVote
+
+tool = ArbitrationTool(strategies=[WeightedVote()], output_format="markdown")
+
+agent = Agent(
+    role="Decision Arbiter",
+    goal="Resolve disagreements between AI agents",
+    tools=[tool],
+)
+```
+
+Or call directly (no CrewAI needed):
+
+```python
+result = await tool._arun(
+    question="Deploy to production?",
+    proposals=[
+        {"id": "p1", "agent_id": "a1", "content": "Deploy now", "confidence": 0.9},
+        {"id": "p2", "agent_id": "a2", "content": "Wait", "confidence": 0.6},
+    ],
+    agents=[
+        {"id": "a1", "name": "GPT-4o", "weight": 0.8},
+        {"id": "a2", "name": "Claude", "weight": 0.9},
+    ],
+)
+print(result)  # markdown verdict
+```
+
+Sync `_run()` is also available for non-async contexts.
+
+---
+
 ## Roadmap
 
-- **M7** — CrewAI adapter
 - **M8** — PyPI release
