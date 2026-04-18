@@ -62,6 +62,36 @@ class Explanation(BaseModel):
     dissents: list[str] = Field(default_factory=list)
     score_breakdown: dict[str, float] = Field(default_factory=dict)
 
+    def text(self) -> str:
+        parts = [self.summary]
+        if self.rationale:
+            parts.append(self.rationale)
+        if self.dissents:
+            parts.append("Dissenting proposals: " + "; ".join(self.dissents) + ".")
+        return " ".join(parts)
+
+    def markdown(self, strategy_name: str = "", status: str = "") -> str:
+        lines = ["## Decision Summary", f"{self.summary}", ""]
+        if strategy_name or status:
+            meta: list[str] = []
+            if strategy_name:
+                meta.append(f"**Strategy:** {strategy_name}")
+            if status:
+                meta.append(f"**Status:** {status}")
+            lines += ["  ".join(meta), ""]
+        if self.rationale:
+            lines += ["### Rationale", self.rationale, ""]
+        if self.score_breakdown:
+            lines += ["### Score Breakdown", "| Proposal | Score |", "|---|---|"]
+            for pid, score in sorted(self.score_breakdown.items(), key=lambda x: -x[1]):
+                lines.append(f"| {pid} | {score:.3f} |")
+            lines.append("")
+        if self.dissents:
+            lines += ["### Dissenting Proposals"]
+            lines += [f"- {d}" for d in self.dissents]
+            lines.append("")
+        return "\n".join(lines)
+
 
 class PolicyDecision(BaseModel):
     allowed: bool
@@ -84,6 +114,15 @@ class Verdict(BaseModel):
     policy_result: PolicyDecision
     status: VerdictStatus = VerdictStatus.resolved
     created_at: datetime = Field(default_factory=_utcnow)
+
+    def render(self, format: str = "text") -> str:  # noqa: A002
+        if format == "markdown":
+            return self.explanation.markdown(
+                strategy_name=self.strategy_name, status=self.status
+            )
+        if format == "json":
+            return self.model_dump_json(indent=2)
+        return self.explanation.text()
 
 
 class AuditEventType(StrEnum):

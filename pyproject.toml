@@ -22,6 +22,7 @@ dependencies = [
     "sqlalchemy[asyncio]>=2.0",
     "aiosqlite>=0.19",
     "structlog>=24.0",
+    "openai>=1.0",
 ]
 
 [project.optional-dependencies]
