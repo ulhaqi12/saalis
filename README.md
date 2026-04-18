@@ -1,5 +1,11 @@
 # saalis
 
+[![CI](https://github.com/ulhaqi12/saalis/actions/workflows/ci.yml/badge.svg)](https://github.com/ulhaqi12/saalis/actions/workflows/ci.yml)
+[![PyPI version](https://img.shields.io/pypi/v/saalis.svg)](https://pypi.org/project/saalis/)
+[![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
+[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
+[![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
+
 Governance and evidence layer for multi-agent AI decision arbitration.
 
 When multiple AI agents produce conflicting outputs, Saalis provides configurable resolution strategies, policy enforcement, explainability, and audit logging.
@@ -10,14 +16,6 @@ When multiple AI agents produce conflicting outputs, Saalis provides configurabl
 pip install saalis
 # or
 uv add saalis
-```
-
-For development:
-
-```bash
-git clone https://github.com/ulhaqi12/saalis
-cd saalis
-uv sync --all-packages --extra dev
 ```
 
 ## Quickstart
@@ -174,22 +172,6 @@ curl -X POST http://localhost:8000/v1/decisions/resolve \
 
 ---
 
-## Development
-
-```bash
-make install-all          # install lib + sidecar deps
-make test                 # lib tests only
-make test-sidecar         # sidecar tests only
-make test-all             # both
-make lint                 # ruff check lib
-make fmt                  # ruff format + fix everything
-make typecheck            # mypy lib
-make typecheck-sidecar    # mypy sidecar
-make all                  # fmt + lint + typecheck + test-all
-```
-
----
-
 ## LangGraph Integration
 
 `ArbitrationNode` is a drop-in LangGraph node. It requires no `langgraph` import — just an async callable that reads from and writes to graph state.
@@ -265,8 +247,10 @@ Sync `_run()` is also available for non-async contexts.
 
 ---
 
-## Install
+## Contributing
 
-```bash
-pip install saalis
-```
+See [CONTRIBUTING.md](CONTRIBUTING.md) for setup instructions, code conventions, and how to add strategies or integration adapters.
+
+## License
+
+Apache 2.0 — see [LICENSE](LICENSE).
