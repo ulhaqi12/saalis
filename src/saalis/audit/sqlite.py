@@ -8,7 +8,7 @@ from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 from saalis.audit.base import AuditStore
-from saalis.models import AuditEvent, AuditEventType
+from saalis.models import AuditEvent, AuditEventType, DeferredDecision
 
 
 class _Base(DeclarativeBase):
@@ -22,6 +22,23 @@ class _AuditRow(_Base):
     event_type: Mapped[str] = mapped_column(String, nullable=False, index=True)
     payload: Mapped[str] = mapped_column(Text, nullable=False)
     timestamp: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, index=True)
+
+
+class _DeferredRow(_Base):
+    __tablename__ = "deferred_decisions"
+
+    decision_id: Mapped[str] = mapped_column(String, primary_key=True)
+    audit_event_id: Mapped[str] = mapped_column(String, nullable=False)
+    deferred_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    resolved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    resolved_by: Mapped[str | None] = mapped_column(String, nullable=True)
+    resolution_outcome: Mapped[str | None] = mapped_column(String, nullable=True)
+
+
+def _to_utc(dt: datetime | None) -> datetime | None:
+    if dt is None:
+        return None
+    return dt.replace(tzinfo=UTC) if dt.tzinfo is None else dt
 
 
 class SQLiteAuditStore(AuditStore):
@@ -38,6 +55,8 @@ class SQLiteAuditStore(AuditStore):
         async with self._engine.begin() as conn:
             await conn.run_sync(_Base.metadata.create_all)
         self._initialized = True
+
+    # ── AuditEvent ────────────────────────────────────────────────────────
 
     async def append(self, event: AuditEvent) -> None:
         await self._ensure_schema()
@@ -75,12 +94,64 @@ class SQLiteAuditStore(AuditStore):
                     id=row.id,
                     event_type=AuditEventType(row.event_type),
                     payload=json.loads(row.payload),
-                    timestamp=row.timestamp.replace(tzinfo=UTC)
-                    if row.timestamp.tzinfo is None
-                    else row.timestamp,
+                    timestamp=_to_utc(row.timestamp),  # type: ignore[arg-type]
                 )
                 for row in rows
             ]
+
+    async def get_event(self, event_id: str) -> AuditEvent | None:
+        await self._ensure_schema()
+        async with self._session_factory() as session:
+            row = await session.get(_AuditRow, event_id)
+            if row is None:
+                return None
+            return AuditEvent(
+                id=row.id,
+                event_type=AuditEventType(row.event_type),
+                payload=json.loads(row.payload),
+                timestamp=_to_utc(row.timestamp),  # type: ignore[arg-type]
+            )
+
+    # ── DeferredDecision ──────────────────────────────────────────────────
+
+    async def defer(self, decision_id: str, audit_event_id: str) -> None:
+        await self._ensure_schema()
+        async with self._session_factory() as session:
+            row = _DeferredRow(
+                decision_id=decision_id,
+                audit_event_id=audit_event_id,
+                deferred_at=datetime.now(UTC),
+            )
+            session.add(row)
+            await session.commit()
+
+    async def get_deferred(self, decision_id: str) -> DeferredDecision | None:
+        await self._ensure_schema()
+        async with self._session_factory() as session:
+            row = await session.get(_DeferredRow, decision_id)
+            if row is None:
+                return None
+            return DeferredDecision(
+                decision_id=row.decision_id,
+                audit_event_id=row.audit_event_id,
+                deferred_at=_to_utc(row.deferred_at),  # type: ignore[arg-type]
+                resolved_at=_to_utc(row.resolved_at),
+                resolved_by=row.resolved_by,
+                resolution_outcome=row.resolution_outcome,
+            )
+
+    async def resolve_deferred(
+        self, decision_id: str, outcome: str, resolved_by: str
+    ) -> None:
+        await self._ensure_schema()
+        async with self._session_factory() as session:
+            row = await session.get(_DeferredRow, decision_id)
+            if row is None:
+                raise KeyError(f"No deferred decision found for decision_id={decision_id!r}")
+            row.resolved_at = datetime.now(UTC)
+            row.resolved_by = resolved_by
+            row.resolution_outcome = outcome
+            await session.commit()
 
     async def close(self) -> None:
         await self._engine.dispose()

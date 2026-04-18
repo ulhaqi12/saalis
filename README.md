@@ -15,7 +15,7 @@ Or for development:
 ```bash
 git clone https://github.com/ulhaqi12/saalis
 cd saalis
-uv sync --extra dev
+uv sync --all-packages --extra dev
 ```
 
 ## Quickstart
@@ -47,11 +47,34 @@ async def main():
     )
 
     verdict = await arb.arbitrate(decision)
-    print(f"Winner: {verdict.winner_proposal_id}")
-    print(f"Summary: {verdict.explanation.summary}")
-    print(f"Scores: {verdict.explanation.score_breakdown}")
+    print(verdict.render("markdown"))
 
 asyncio.run(main())
+```
+
+## Strategies
+
+| Strategy | Description |
+|---|---|
+| `WeightedVote` | Scores proposals by `agent.weight × confidence`, picks highest |
+| `LLMJudge` | Calls an LLM to adjudicate; falls back to `WeightedVote` on failure |
+| `DeferToHuman` | Returns a `pending_human` verdict; resolved via HTTP callback |
+
+### LLMJudge
+
+```python
+from saalis.strategy import LLMJudge
+
+arb = Arbitrator(
+    strategies=[LLMJudge(
+        model="gpt-4o",       # any OpenAI-compatible model
+        base_url=None,        # override for Ollama, Groq, etc.
+        api_key=None,         # falls back to OPENAI_API_KEY env var
+        max_retries=3,
+    )],
+)
+verdict = await arb.arbitrate(decision)
+print(verdict.render("markdown"))
 ```
 
 ## Policy enforcement
@@ -67,29 +90,12 @@ engine = PolicyEngine(rules=[
 arb = Arbitrator(strategies=[WeightedVote()], policy_engine=engine)
 ```
 
-## Strategies
-
-| Strategy | Description |
-|---|---|
-| `WeightedVote` | Scores proposals by `agent.weight × confidence`, picks highest |
-| `LLMJudge` | Calls an LLM to adjudicate; falls back to `WeightedVote` on failure |
-| `DeferToHuman` | Returns a `pending_human` verdict; resolution requires a callback |
-
-### LLMJudge
+## Verdict rendering
 
 ```python
-from saalis.strategy import LLMJudge
-
-arb = Arbitrator(
-    strategies=[LLMJudge(
-        model="gpt-4o",          # any OpenAI-compatible model
-        base_url=None,           # override for Ollama, Groq, etc.
-        api_key=None,            # falls back to OPENAI_API_KEY env var
-        max_retries=3,
-    )],
-)
-verdict = await arb.arbitrate(decision)
-print(verdict.render("markdown"))  # human-readable audit output
+verdict.render()           # plain text paragraph
+verdict.render("markdown") # structured markdown (for audit logs, Slack, docs)
+verdict.render("json")     # full JSON
 ```
 
 ## Audit stores
@@ -100,27 +106,88 @@ print(verdict.render("markdown"))  # human-readable audit output
 | `JSONLAuditStore(path)` | Append-only JSONL file |
 | `SQLiteAuditStore(db_url)` | SQLite via sqlalchemy async |
 
+---
+
+## HTTP Sidecar
+
+A standalone FastAPI process for teams that can't import Python directly.
+
+### Run
+
+```bash
+# From repo root
+docker build -f sidecar/Dockerfile -t saalis-sidecar .
+docker run -p 8000:8000 \
+  -e SAALIS_STRATEGY=weighted_vote \
+  -e SAALIS_BEARER_TOKEN=secret \
+  saalis-sidecar
+```
+
+Or without Docker:
+
+```bash
+SAALIS_BEARER_TOKEN=secret uv run --package saalis-sidecar \
+  uvicorn saalis_sidecar.app:app --port 8000
+```
+
+### Endpoints
+
+| Method | Path | Description |
+|---|---|---|
+| `POST` | `/v1/decisions/resolve` | Arbitrate a decision, returns `Verdict` |
+| `GET` | `/v1/decisions/{id}/audit` | Query audit events for a decision |
+| `GET` | `/v1/audit/events/{id}` | Fetch a single audit event |
+| `POST` | `/v1/decisions/{id}/human_response` | Resolve a deferred decision |
+| `GET` | `/healthz` | Liveness probe |
+| `GET` | `/readyz` | Readiness probe (checks DB) |
+| `GET` | `/metrics` | Prometheus metrics |
+
+### Example
+
+```bash
+curl -X POST http://localhost:8000/v1/decisions/resolve \
+  -H "Authorization: Bearer secret" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "question": "Deploy to production?",
+    "agents": [{"id": "a1", "name": "GPT-4o", "weight": 0.8}],
+    "proposals": [
+      {"agent_id": "a1", "id": "p1", "content": "Deploy now", "confidence": 0.9},
+      {"agent_id": "a1", "id": "p2", "content": "Wait", "confidence": 0.6}
+    ]
+  }'
+```
+
+### Configuration (env vars)
+
+| Variable | Default | Description |
+|---|---|---|
+| `SAALIS_STRATEGY` | `weighted_vote` | `weighted_vote` \| `llm_judge` \| `defer_to_human` |
+| `SAALIS_AUDIT_PATH` | `./saalis_audit.db` | Path to SQLite audit file |
+| `SAALIS_BEARER_TOKEN` | `""` | Static auth token (empty = disabled) |
+| `SAALIS_LLM_MODEL` | `gpt-4o` | Model for `LLMJudge` |
+| `SAALIS_LLM_BASE_URL` | `""` | OpenAI-compatible base URL override |
+| `SAALIS_MIN_CONFIDENCE` | `""` | Float threshold for `MinConfidenceRule` |
+| `SAALIS_BLOCKLIST_AGENTS` | `""` | Comma-separated blocked agent IDs |
+
+---
+
 ## Development
 
 ```bash
-make test        # run tests
-make lint        # ruff check
-make fmt         # ruff format + fix
-make typecheck   # mypy
-make all         # fmt + lint + typecheck + test
-```
-
-## Verdict rendering
-
-```python
-verdict.render()           # plain text paragraph
-verdict.render("markdown") # structured markdown (for audit logs, Slack, docs)
-verdict.render("json")     # full JSON
+make install-all          # install lib + sidecar deps
+make test                 # lib tests only
+make test-sidecar         # sidecar tests only
+make test-all             # both
+make lint                 # ruff check lib
+make fmt                  # ruff format + fix everything
+make typecheck            # mypy lib
+make typecheck-sidecar    # mypy sidecar
+make all                  # fmt + lint + typecheck + test-all
 ```
 
 ## Roadmap
 
-- **M5** — HTTP sidecar (FastAPI: `/resolve`, `/audit`, `/human-response`)
 - **M6** — LangGraph adapter
 - **M7** — CrewAI adapter
 - **M8** — PyPI release

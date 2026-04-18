@@ -51,3 +51,6 @@ select = ["E", "F", "I", "UP"]
 python_version = "3.11"
 strict = true
 files = ["src/saalis"]
+
+[tool.uv.workspace]
+members = ["sidecar"]

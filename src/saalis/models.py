@@ -139,3 +139,12 @@ class AuditEvent(BaseModel):
     event_type: AuditEventType
     payload: dict[str, Any] = Field(default_factory=dict)
     timestamp: datetime = Field(default_factory=_utcnow)
+
+
+class DeferredDecision(BaseModel):
+    decision_id: str
+    audit_event_id: str
+    deferred_at: datetime
+    resolved_at: datetime | None = None
+    resolved_by: str | None = None
+    resolution_outcome: str | None = None
