@@ -7,10 +7,12 @@ When multiple AI agents produce conflicting outputs, Saalis provides configurabl
 ## Install
 
 ```bash
+pip install saalis
+# or
 uv add saalis
 ```
 
-Or for development:
+For development:
 
 ```bash
 git clone https://github.com/ulhaqi12/saalis
@@ -263,6 +265,8 @@ Sync `_run()` is also available for non-async contexts.
 
 ---
 
-## Roadmap
+## Install
 
-- **M8** — PyPI release
+```bash
+pip install saalis
+```
