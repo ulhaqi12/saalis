@@ -7,6 +7,7 @@ from saalis.models import (
     AuditEvent,
     AuditEventType,
     Decision,
+    Explanation,
     Verdict,
     VerdictStatus,
 )
@@ -25,6 +26,11 @@ class Arbitrator:
     ) -> None:
         if not strategies:
             raise ValueError("At least one strategy is required")
+        if len(strategies) > 1:
+            raise ValueError(
+                "Arbitrator accepts exactly one strategy. "
+                "For fallback behaviour, use LLMJudge(fallback=...) or compose strategies manually."
+            )
         self._strategies = strategies
         self._policy = policy_engine or PolicyEngine()
         self._audit = audit_store or NullAuditStore()
@@ -51,7 +57,7 @@ class Arbitrator:
                 decision_id=decision.id,
                 winner_proposal_id=None,
                 strategy_name="policy",
-                explanation=__import__("saalis.models", fromlist=["Explanation"]).Explanation(
+                explanation=Explanation(
                     summary=f"Blocked by policy: {pre_check.reason}"
                 ),
                 policy_result=pre_check,

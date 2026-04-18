@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 import json
-import logging
 from abc import ABC, abstractmethod
 
+import structlog
 from openai import AsyncOpenAI
 
 from saalis.models import (
@@ -14,7 +14,7 @@ from saalis.models import (
     VerdictStatus,
 )
 
-_log = logging.getLogger(__name__)
+_log = structlog.get_logger(__name__)
 
 _JUDGE_SYSTEM_PROMPT = """\
 You are an impartial arbitrator. Given a question and a list of proposals from AI agents, \
@@ -147,7 +147,12 @@ class LLMJudge(Strategy):
                     raise ValueError(f"Missing required fields in judge response: {parsed}")
                 return parsed
             except Exception as exc:
-                _log.warning("LLMJudge attempt %d/%d failed: %s", attempt, self._max_retries, exc)
+                _log.warning(
+                    "llmjudge_attempt_failed",
+                    attempt=attempt,
+                    max_retries=self._max_retries,
+                    error=str(exc),
+                )
                 if attempt == self._max_retries:
                     raise
         raise RuntimeError("unreachable")
@@ -157,7 +162,7 @@ class LLMJudge(Strategy):
         try:
             result = await self._call_judge(user_msg)
         except Exception as exc:
-            _log.error("LLMJudge exhausted retries, falling back: %s", exc)
+            _log.error("llmjudge_exhausted_retries", error=str(exc), fallback=self._fallback.name)
             fallback_verdict = await self._fallback.resolve(decision)
             return fallback_verdict.model_copy(
                 update={
@@ -185,7 +190,11 @@ class LLMJudge(Strategy):
 
         proposal_ids = {p.id for p in decision.proposals}
         if winner_id not in proposal_ids:
-            _log.warning("LLMJudge returned unknown proposal id %r, falling back", winner_id)
+            _log.warning(
+                "llmjudge_unknown_proposal_id",
+                winner_id=winner_id,
+                fallback=self._fallback.name,
+            )
             fallback_verdict = await self._fallback.resolve(decision)
             return fallback_verdict.model_copy(
                 update={

@@ -17,9 +17,13 @@ class JSONLAuditStore(AuditStore):
 
     async def append(self, event: AuditEvent) -> None:
         line = event.model_dump_json() + "\n"
+        loop = asyncio.get_event_loop()
         async with self._lock:
-            with self._path.open("a", encoding="utf-8") as f:
-                f.write(line)
+            await loop.run_in_executor(None, self._write_line, line)
+
+    def _write_line(self, line: str) -> None:
+        with self._path.open("a", encoding="utf-8") as f:
+            f.write(line)
 
     async def query(
         self,

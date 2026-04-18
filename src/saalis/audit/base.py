@@ -19,6 +19,9 @@ class AuditStore(ABC):
         limit: int = 100,
     ) -> list[AuditEvent]: ...
 
+    async def close(self) -> None:
+        """Release any held resources. Default is a no-op."""
+
 
 class NullAuditStore(AuditStore):
     """No-op store for use when auditing is not needed."""

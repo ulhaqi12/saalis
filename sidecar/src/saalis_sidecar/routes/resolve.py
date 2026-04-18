@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import time
 from typing import Any
+from uuid import uuid4
 
 from fastapi import APIRouter, Request
 from pydantic import BaseModel
@@ -44,11 +45,11 @@ async def resolve(body: ResolveRequest, request: Request) -> Verdict:
     state: AppState = request.app.state.app_state
 
     agents = [
-        Agent(id=a.id or Agent().id, name=a.name, weight=a.weight) for a in body.agents
+        Agent(id=a.id or str(uuid4()), name=a.name, weight=a.weight) for a in body.agents
     ]
     proposals = [
         Proposal(
-            id=p.id or Proposal(agent_id=p.agent_id, content=p.content).id,
+            id=p.id or str(uuid4()),
             agent_id=p.agent_id,
             content=p.content,
             confidence=p.confidence,
@@ -70,12 +71,7 @@ async def resolve(body: ResolveRequest, request: Request) -> Verdict:
     record_arbitration(verdict.strategy_name, verdict.status, duration)
 
     if verdict.status == VerdictStatus.pending_human:
-        deferred_event_id = ""
-        events = await state.audit_store.query(limit=10)
-        for ev in reversed(events):
-            if ev.payload.get("decision_id") == decision.id:
-                deferred_event_id = ev.id
-                break
+        deferred_event_id = await state.audit_store.get_deferred_event_id(decision.id) or ""
         await state.audit_store.defer(decision.id, deferred_event_id)
 
     return verdict

@@ -7,7 +7,7 @@ install-all:
 	uv sync --all-packages --extra dev
 
 test:
-	uv run pytest
+	uv run pytest --cov=src/saalis --cov-report=term-missing
 
 test-sidecar:
 	uv run --package saalis-sidecar pytest sidecar/tests/ --tb=short

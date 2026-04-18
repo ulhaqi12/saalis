@@ -114,6 +114,23 @@ class SQLiteAuditStore(AuditStore):
 
     # ── DeferredDecision ──────────────────────────────────────────────────
 
+    async def get_deferred_event_id(self, decision_id: str) -> str | None:
+        """Return the audit event id for the human_deferred event of a decision."""
+        await self._ensure_schema()
+        async with self._session_factory() as session:
+            stmt = select(_AuditRow).where(
+                _AuditRow.event_type == AuditEventType.human_deferred.value
+            )
+            rows = (await session.execute(stmt)).scalars().all()
+            for row in rows:
+                try:
+                    payload = json.loads(row.payload)
+                except (json.JSONDecodeError, ValueError):
+                    continue
+                if payload.get("decision_id") == decision_id:
+                    return row.id
+        return None
+
     async def defer(self, decision_id: str, audit_event_id: str) -> None:
         await self._ensure_schema()
         async with self._session_factory() as session:
