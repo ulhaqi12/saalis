@@ -6,10 +6,8 @@ Tests drive ``_arun`` (async) and ``_run`` (sync) directly.
 
 from __future__ import annotations
 
-import pytest
-
 from saalis.integrations.crewai import ArbitrationTool
-from saalis.models import Agent, Proposal, VerdictStatus
+from saalis.models import Agent, Proposal
 from saalis.policy import MinConfidenceRule, PolicyEngine
 from saalis.strategy import DeferToHuman, WeightedVote
 
