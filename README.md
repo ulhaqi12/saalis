@@ -29,8 +29,8 @@ from saalis.audit.jsonl import JSONLAuditStore
 
 async def main():
     agents = [
-        Agent(id="a1", name="GPT-4o", weight=0.6),
-        Agent(id="a2", name="Claude", weight=0.8),
+        Agent(id="a1", name="GPT-4o", weight=1.0),
+        Agent(id="a2", name="Claude", weight=1.5),  # 1.5× more influential
     ]
 
     decision = Decision(
@@ -53,13 +53,22 @@ async def main():
 asyncio.run(main())
 ```
 
+Or use `build_arbitrator` to skip the manual assembly:
+
+```python
+from saalis import build_arbitrator
+
+arb = build_arbitrator(strategy="weighted_vote")
+verdict = await arb.arbitrate(decision)
+```
+
 ## Strategies
 
 | Strategy | Description |
 |---|---|
-| `WeightedVote` | Scores proposals by `agent.weight × confidence`, picks highest |
+| `WeightedVote` | Scores proposals by `agent.weight × confidence`, picks highest. `weight` is an unbounded multiplier (`≥ 0`) — use `2.0` to make an agent twice as influential |
 | `LLMJudge` | Calls an LLM to adjudicate; falls back to `WeightedVote` on failure |
-| `DeferToHuman` | Returns a `pending_human` verdict; resolved via HTTP callback |
+| `DeferToHuman` | Returns a `pending_human` verdict; resolved via HTTP or MCP callback |
 
 ### LLMJudge
 
@@ -170,6 +179,63 @@ curl -X POST http://localhost:8000/v1/decisions/resolve \
 | `SAALIS_LLM_BASE_URL` | `""` | OpenAI-compatible base URL override |
 | `SAALIS_MIN_CONFIDENCE` | `""` | Float threshold for `MinConfidenceRule` |
 | `SAALIS_BLOCKLIST_AGENTS` | `""` | Comma-separated blocked agent IDs |
+
+---
+
+## MCP Server
+
+`saalis-mcp` exposes Saalis arbitration as native [Model Context Protocol](https://modelcontextprotocol.io) tools. Any Claude, GPT-4o, or Gemini agent running in an MCP-native orchestrator can call Saalis directly — no Python import required.
+
+### Run (stdio — Claude Desktop)
+
+```bash
+cd mcp
+SAALIS_MCP_STRATEGY=weighted_vote python -m saalis_mcp
+```
+
+### Run (HTTP/SSE — server deployment)
+
+```bash
+SAALIS_MCP_TRANSPORT=http SAALIS_MCP_PORT=3000 python -m saalis_mcp
+```
+
+### Claude Desktop config
+
+```json
+{
+  "mcpServers": {
+    "saalis": {
+      "command": "python",
+      "args": ["-m", "saalis_mcp"],
+      "cwd": "/path/to/saalis/mcp",
+      "env": {"SAALIS_MCP_STRATEGY": "weighted_vote"}
+    }
+  }
+}
+```
+
+### Tools
+
+| Tool | Description |
+|---|---|
+| `saalis_arbitrate` | Submit a decision, get a `Verdict` JSON |
+| `saalis_get_verdict` | Retrieve a cached verdict by `decision_id` |
+| `saalis_audit_query` | Query audit events (filter by type, time range) |
+| `saalis_human_respond` | Resolve a `pending_human` decision |
+| `saalis_get_pending` | List all unresolved deferred decisions |
+
+### Configuration (env vars)
+
+| Variable | Default | Description |
+|---|---|---|
+| `SAALIS_MCP_TRANSPORT` | `stdio` | `stdio` \| `http` |
+| `SAALIS_MCP_PORT` | `3000` | Port for HTTP/SSE mode |
+| `SAALIS_MCP_STRATEGY` | `weighted_vote` | `weighted_vote` \| `llm_judge` \| `defer_to_human` |
+| `SAALIS_MCP_AUDIT_PATH` | `./saalis_mcp_audit.db` | SQLite audit file path |
+| `SAALIS_MCP_LLM_MODEL` | `gpt-4o` | Model for `LLMJudge` |
+| `SAALIS_MCP_LLM_BASE_URL` | `""` | OpenAI-compatible base URL override |
+| `SAALIS_MCP_MIN_CONFIDENCE` | `""` | Float threshold for `MinConfidenceRule` |
+| `SAALIS_MCP_BLOCKLIST_AGENTS` | `""` | Comma-separated blocked agent IDs |
 
 ---
 
