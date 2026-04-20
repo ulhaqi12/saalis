@@ -23,6 +23,9 @@ jobs:
 
       - name: Set up Python
         run: uv python install 3.12
+      
+      - name: Make Environment
+        run: uv venv
 
       - name: Install MkDocs Material
         run: uv pip install mkdocs-material
