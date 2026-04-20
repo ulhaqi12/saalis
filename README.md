@@ -250,7 +250,7 @@ Sync `_run()` is also available for non-async contexts.
 
 ## Roadmap
 
-- [ ] **Protocol interoperability** — native MCP server and A2A agent endpoint
+- [x] **Protocol interoperability** — native MCP server (`saalis-mcp`) for Claude Desktop and any MCP-native orchestrator
 - [ ] **Advanced arbitration** — multi-model debate, adversarial courtroom, ensemble strategies, hallucination detection
 - [ ] **Security hardening** — proposal sanitization, signed agent identity, rate limiting, hash-chained audit logs
 - [ ] **OpenTelemetry** — GenAI semantic convention spans, distributed trace propagation, Grafana dashboard

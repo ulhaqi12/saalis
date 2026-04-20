@@ -1,18 +1,20 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from saalis.arbitrator import Arbitrator
 from saalis.audit.sqlite import SQLiteAuditStore
+from saalis.models import Verdict
 from saalis.wiring import build_arbitrator
 
-from saalis_sidecar.settings import Settings
+from saalis_mcp.settings import Settings
 
 
 @dataclass
 class AppState:
     arbitrator: Arbitrator
     audit_store: SQLiteAuditStore
+    verdict_cache: dict[str, Verdict] = field(default_factory=dict)
 
 
 def build_state(settings: Settings) -> AppState:

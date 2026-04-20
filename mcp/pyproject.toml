@@ -3,39 +3,29 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "saalis"
+name = "saalis-mcp"
 version = "0.2.0"
-description = "Governance and evidence layer for multi-agent AI decision arbitration"
+description = "MCP server for Saalis — expose arbitration as native MCP tools"
 readme = "README.md"
 requires-python = ">=3.11"
 license = { text = "Apache-2.0" }
 authors = [{ name = "ulhaqi12", email = "ulhaqi12@gmail.com" }]
-keywords = ["ai", "agents", "arbitration", "governance", "llm"]
-classifiers = [
-    "Development Status :: 3 - Alpha",
-    "Intended Audience :: Developers",
-    "Programming Language :: Python :: 3.11",
-    "Programming Language :: Python :: 3.12",
-]
 dependencies = [
-    "pydantic>=2.0",
-    "sqlalchemy[asyncio]>=2.0",
-    "aiosqlite>=0.19",
-    "structlog>=24.0",
-    "openai>=1.0",
+    "saalis",
+    "mcp>=1.0",
+    "pydantic-settings>=2.0",
 ]
 
 [project.optional-dependencies]
 dev = [
     "pytest>=8.0",
     "pytest-asyncio>=0.23",
-    "pytest-cov>=5.0",
     "ruff>=0.4",
     "mypy>=1.10",
 ]
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/saalis"]
+packages = ["src/saalis_mcp"]
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
@@ -51,7 +41,7 @@ select = ["E", "F", "I", "UP"]
 [tool.mypy]
 python_version = "3.11"
 strict = true
-files = ["src/saalis"]
+files = ["src/saalis_mcp"]
 
-[tool.uv.workspace]
-members = ["sidecar", "mcp"]
+[tool.uv.sources]
+saalis = { workspace = true }
