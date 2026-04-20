@@ -1,0 +1,79 @@
+site_name: Saalis
+site_description: Governance and evidence layer for multi-agent AI decision arbitration
+site_url: https://ulhaqi12.github.io/saalis
+repo_url: https://github.com/ulhaqi12/saalis
+repo_name: ulhaqi12/saalis
+edit_uri: edit/main/docs/
+
+theme:
+  name: material
+  palette:
+    - scheme: default
+      primary: deep purple
+      accent: indigo
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - scheme: slate
+      primary: deep purple
+      accent: indigo
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  font:
+    text: Inter
+    code: JetBrains Mono
+  features:
+    - navigation.tabs
+    - navigation.tabs.sticky
+    - navigation.sections
+    - navigation.top
+    - navigation.footer
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+    - content.code.annotate
+    - content.action.edit
+
+nav:
+  - Home: index.md
+  - Getting Started:
+    - Installation: install.md
+    - Quickstart: quickstart.md
+  - Core:
+    - Strategies: strategies.md
+    - Policy Enforcement: policy.md
+    - Audit Stores: audit.md
+    - Verdict Rendering: rendering.md
+  - Transports:
+    - HTTP Sidecar: sidecar.md
+    - MCP Server: mcp.md
+  - Integrations:
+    - LangGraph: integrations/langgraph.md
+    - CrewAI: integrations/crewai.md
+  - Contributing: contributing.md
+
+markdown_extensions:
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+  - tables
+  - toc:
+      permalink: true
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/ulhaqi12/saalis
+    - icon: fontawesome/brands/python
+      link: https://pypi.org/project/saalis/
