@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from saalis.arbitrator import Arbitrator
 from saalis.audit.base import AuditStore, NullAuditStore
-from saalis.policy import BlocklistAgentRule, MinConfidenceRule, PolicyEngine
+from saalis.policy import BlocklistAgentRule, MinConfidenceRule, PolicyEngine, PolicyRule
 from saalis.strategy import DeferToHuman, LLMJudge, Strategy, WeightedVote
 
 
@@ -30,7 +30,7 @@ def build_policy(
     min_confidence: float | None = None,
     blocklist_agents: list[str] | None = None,
 ) -> PolicyEngine:
-    rules = []
+    rules: list[PolicyRule] = []
     if min_confidence is not None:
         rules.append(MinConfidenceRule(threshold=min_confidence))
     if blocklist_agents:
