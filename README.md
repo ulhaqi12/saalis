@@ -8,8 +8,11 @@
 
 Governance and evidence layer for multi-agent AI decision arbitration.
 
-
 When multiple AI agents produce conflicting outputs, Saalis provides configurable resolution strategies, policy enforcement, explainability, and audit logging.
+
+**[Full documentation →](https://ulhaqi12.github.io/saalis)**
+
+---
 
 ## Install
 
@@ -23,296 +26,36 @@ uv add saalis
 
 ```python
 import asyncio
-from saalis import Arbitrator, Agent, Decision, Proposal
-from saalis.strategy import WeightedVote
-from saalis.audit.jsonl import JSONLAuditStore
+from saalis import build_arbitrator, Decision, Proposal, Agent
 
 async def main():
-    agents = [
-        Agent(id="a1", name="GPT-4o", weight=1.0),
-        Agent(id="a2", name="Claude", weight=1.5),  # 1.5× more influential
-    ]
-
     decision = Decision(
-        question="Should we approve this PR?",
-        agents=agents,
+        question="Should we deploy to production?",
+        agents=[Agent(id="a1", name="GPT-4o", weight=1.0),
+                Agent(id="a2", name="Claude",  weight=1.5)],
         proposals=[
-            Proposal(agent_id="a1", content="Approve", confidence=0.9),
-            Proposal(agent_id="a2", content="Request changes", confidence=0.7),
+            Proposal(agent_id="a1", content="Deploy now",     confidence=0.9),
+            Proposal(agent_id="a2", content="Wait for tests", confidence=0.8),
         ],
     )
-
-    arb = Arbitrator(
-        strategies=[WeightedVote()],
-        audit_store=JSONLAuditStore("audit.jsonl"),
-    )
-
+    arb = build_arbitrator(strategy="weighted_vote")
     verdict = await arb.arbitrate(decision)
     print(verdict.render("markdown"))
 
 asyncio.run(main())
 ```
 
-Or use `build_arbitrator` to skip the manual assembly:
+## What's inside
 
-```python
-from saalis import build_arbitrator
-
-arb = build_arbitrator(strategy="weighted_vote")
-verdict = await arb.arbitrate(decision)
-```
-
-## Strategies
-
-| Strategy | Description |
+| Feature | Description |
 |---|---|
-| `WeightedVote` | Scores proposals by `agent.weight × confidence`, picks highest. `weight` is an unbounded multiplier (`≥ 0`) — use `2.0` to make an agent twice as influential |
-| `LLMJudge` | Calls an LLM to adjudicate; falls back to `WeightedVote` on failure |
-| `DeferToHuman` | Returns a `pending_human` verdict; resolved via HTTP or MCP callback |
-
-### LLMJudge
-
-```python
-from saalis.strategy import LLMJudge
-
-arb = Arbitrator(
-    strategies=[LLMJudge(
-        model="gpt-4o",       # any OpenAI-compatible model
-        base_url=None,        # override for Ollama, Groq, etc.
-        api_key=None,         # falls back to OPENAI_API_KEY env var
-        max_retries=3,
-    )],
-)
-verdict = await arb.arbitrate(decision)
-print(verdict.render("markdown"))
-```
-
-## Policy enforcement
-
-```python
-from saalis.policy import PolicyEngine, MinConfidenceRule, BlocklistAgentRule
-
-engine = PolicyEngine(rules=[
-    MinConfidenceRule(threshold=0.6),
-    BlocklistAgentRule(blocklist=["untrusted-agent-id"]),
-])
-
-arb = Arbitrator(strategies=[WeightedVote()], policy_engine=engine)
-```
-
-## Verdict rendering
-
-```python
-verdict.render()           # plain text paragraph
-verdict.render("markdown") # structured markdown (for audit logs, Slack, docs)
-verdict.render("json")     # full JSON
-```
-
-## Audit stores
-
-| Store | Usage |
-|---|---|
-| `NullAuditStore` | Default, no-op |
-| `JSONLAuditStore(path)` | Append-only JSONL file |
-| `SQLiteAuditStore(db_url)` | SQLite via sqlalchemy async |
-
----
-
-## HTTP Sidecar
-
-A standalone FastAPI process for teams that can't import Python directly.
-
-### Run
-
-```bash
-# From repo root
-docker build -f sidecar/Dockerfile -t saalis-sidecar .
-docker run -p 8000:8000 \
-  -e SAALIS_STRATEGY=weighted_vote \
-  -e SAALIS_BEARER_TOKEN=secret \
-  saalis-sidecar
-```
-
-Or without Docker:
-
-```bash
-SAALIS_BEARER_TOKEN=secret uv run --package saalis-sidecar \
-  uvicorn saalis_sidecar.app:app --port 8000
-```
-
-### Endpoints
-
-| Method | Path | Description |
-|---|---|---|
-| `POST` | `/v1/decisions/resolve` | Arbitrate a decision, returns `Verdict` |
-| `GET` | `/v1/decisions/{id}/audit` | Query audit events for a decision |
-| `GET` | `/v1/audit/events/{id}` | Fetch a single audit event |
-| `POST` | `/v1/decisions/{id}/human_response` | Resolve a deferred decision |
-| `GET` | `/healthz` | Liveness probe |
-| `GET` | `/readyz` | Readiness probe (checks DB) |
-| `GET` | `/metrics` | Prometheus metrics |
-
-### Example
-
-```bash
-curl -X POST http://localhost:8000/v1/decisions/resolve \
-  -H "Authorization: Bearer secret" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "question": "Deploy to production?",
-    "agents": [{"id": "a1", "name": "GPT-4o", "weight": 0.8}],
-    "proposals": [
-      {"agent_id": "a1", "id": "p1", "content": "Deploy now", "confidence": 0.9},
-      {"agent_id": "a1", "id": "p2", "content": "Wait", "confidence": 0.6}
-    ]
-  }'
-```
-
-### Configuration (env vars)
-
-| Variable | Default | Description |
-|---|---|---|
-| `SAALIS_STRATEGY` | `weighted_vote` | `weighted_vote` \| `llm_judge` \| `defer_to_human` |
-| `SAALIS_AUDIT_PATH` | `./saalis_audit.db` | Path to SQLite audit file |
-| `SAALIS_BEARER_TOKEN` | `""` | Static auth token (empty = disabled) |
-| `SAALIS_LLM_MODEL` | `gpt-4o` | Model for `LLMJudge` |
-| `SAALIS_LLM_BASE_URL` | `""` | OpenAI-compatible base URL override |
-| `SAALIS_MIN_CONFIDENCE` | `""` | Float threshold for `MinConfidenceRule` |
-| `SAALIS_BLOCKLIST_AGENTS` | `""` | Comma-separated blocked agent IDs |
-
----
-
-## MCP Server
-
-`saalis-mcp` exposes Saalis arbitration as native [Model Context Protocol](https://modelcontextprotocol.io) tools. Any Claude, GPT-4o, or Gemini agent running in an MCP-native orchestrator can call Saalis directly — no Python import required.
-
-### Run (stdio — Claude Desktop)
-
-```bash
-cd mcp
-SAALIS_MCP_STRATEGY=weighted_vote python -m saalis_mcp
-```
-
-### Run (HTTP/SSE — server deployment)
-
-```bash
-SAALIS_MCP_TRANSPORT=http SAALIS_MCP_PORT=3000 python -m saalis_mcp
-```
-
-### Claude Desktop config
-
-```json
-{
-  "mcpServers": {
-    "saalis": {
-      "command": "python",
-      "args": ["-m", "saalis_mcp"],
-      "cwd": "/path/to/saalis/mcp",
-      "env": {"SAALIS_MCP_STRATEGY": "weighted_vote"}
-    }
-  }
-}
-```
-
-### Tools
-
-| Tool | Description |
-|---|---|
-| `saalis_arbitrate` | Submit a decision, get a `Verdict` JSON |
-| `saalis_get_verdict` | Retrieve a cached verdict by `decision_id` |
-| `saalis_audit_query` | Query audit events (filter by type, time range) |
-| `saalis_human_respond` | Resolve a `pending_human` decision |
-| `saalis_get_pending` | List all unresolved deferred decisions |
-
-### Configuration (env vars)
-
-| Variable | Default | Description |
-|---|---|---|
-| `SAALIS_MCP_TRANSPORT` | `stdio` | `stdio` \| `http` |
-| `SAALIS_MCP_PORT` | `3000` | Port for HTTP/SSE mode |
-| `SAALIS_MCP_STRATEGY` | `weighted_vote` | `weighted_vote` \| `llm_judge` \| `defer_to_human` |
-| `SAALIS_MCP_AUDIT_PATH` | `./saalis_mcp_audit.db` | SQLite audit file path |
-| `SAALIS_MCP_LLM_MODEL` | `gpt-4o` | Model for `LLMJudge` |
-| `SAALIS_MCP_LLM_BASE_URL` | `""` | OpenAI-compatible base URL override |
-| `SAALIS_MCP_MIN_CONFIDENCE` | `""` | Float threshold for `MinConfidenceRule` |
-| `SAALIS_MCP_BLOCKLIST_AGENTS` | `""` | Comma-separated blocked agent IDs |
-
----
-
-## LangGraph Integration
-
-`ArbitrationNode` is a drop-in LangGraph node. It requires no `langgraph` import — just an async callable that reads from and writes to graph state.
-
-```python
-from typing import TypedDict
-from langgraph.graph import StateGraph, END
-from saalis.integrations.langgraph import ArbitrationNode
-from saalis.strategy import WeightedVote
-
-class AgentState(TypedDict):
-    question: str
-    proposals: list
-    agents: list
-    verdict: object
-
-node = ArbitrationNode(strategies=[WeightedVote()])
-
-graph = StateGraph(AgentState)
-graph.add_node("arbitrate", node)
-graph.set_entry_point("arbitrate")
-graph.add_edge("arbitrate", END)
-app = graph.compile()
-
-result = await app.ainvoke({
-    "question": "Which approach is better?",
-    "agents": [{"id": "a1", "name": "GPT-4o", "weight": 0.8}],
-    "proposals": [{"agent_id": "a1", "content": "Approach A", "confidence": 0.9}],
-})
-print(result["verdict"].render("markdown"))
-```
-
-All state keys are configurable via `question_key`, `proposals_key`, `agents_key`, `verdict_key`. State values can be raw dicts or Pydantic objects — both accepted.
-
----
-
-## CrewAI Integration
-
-`ArbitrationTool` duck-types CrewAI's `BaseTool` interface (`name`, `description`, `_run`, `_arun`) without importing `crewai`. Attach it to any CrewAI agent or call it directly.
-
-```python
-from crewai import Agent, Task, Crew
-from saalis.integrations.crewai import ArbitrationTool
-from saalis.strategy import WeightedVote
-
-tool = ArbitrationTool(strategies=[WeightedVote()], output_format="markdown")
-
-agent = Agent(
-    role="Decision Arbiter",
-    goal="Resolve disagreements between AI agents",
-    tools=[tool],
-)
-```
-
-Or call directly (no CrewAI needed):
-
-```python
-result = await tool._arun(
-    question="Deploy to production?",
-    proposals=[
-        {"id": "p1", "agent_id": "a1", "content": "Deploy now", "confidence": 0.9},
-        {"id": "p2", "agent_id": "a2", "content": "Wait", "confidence": 0.6},
-    ],
-    agents=[
-        {"id": "a1", "name": "GPT-4o", "weight": 0.8},
-        {"id": "a2", "name": "Claude", "weight": 0.9},
-    ],
-)
-print(result)  # markdown verdict
-```
-
-Sync `_run()` is also available for non-async contexts.
-
----
+| **Strategies** | `WeightedVote`, `LLMJudge`, `DeferToHuman` |
+| **Policy** | Pre/post-arbitration rules: min confidence, agent blocklist |
+| **Audit** | Append-only event log — JSONL or SQLite |
+| **Rendering** | Verdicts as plain text, Markdown, or JSON |
+| **HTTP Sidecar** | Standalone FastAPI service — Docker-ready |
+| **MCP Server** | Native MCP tools for Claude Desktop and any MCP orchestrator |
+| **Integrations** | LangGraph node, CrewAI tool |
 
 ## Roadmap
 
