@@ -32,7 +32,7 @@ class Evidence(BaseModel):
 class Agent(BaseModel):
     id: str = Field(default_factory=_new_id)
     name: str
-    weight: float = Field(default=1.0, ge=0.0, le=1.0)
+    weight: float = Field(default=1.0, ge=0.0)
     metadata: dict[str, Any] = Field(default_factory=dict)
 
 

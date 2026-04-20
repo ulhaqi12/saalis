@@ -13,6 +13,7 @@ from saalis.models import (
     Verdict,
     VerdictStatus,
 )
+from saalis.wiring import build_arbitrator
 
 __all__ = [
     "Agent",
@@ -28,4 +29,5 @@ __all__ = [
     "Proposal",
     "Verdict",
     "VerdictStatus",
+    "build_arbitrator",
 ]

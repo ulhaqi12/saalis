@@ -170,5 +170,22 @@ class SQLiteAuditStore(AuditStore):
             row.resolution_outcome = outcome
             await session.commit()
 
+    async def list_pending_deferred(self) -> list[DeferredDecision]:
+        await self._ensure_schema()
+        async with self._session_factory() as session:
+            stmt = select(_DeferredRow).where(_DeferredRow.resolved_at.is_(None))
+            rows = (await session.execute(stmt)).scalars().all()
+            return [
+                DeferredDecision(
+                    decision_id=row.decision_id,
+                    audit_event_id=row.audit_event_id,
+                    deferred_at=_to_utc(row.deferred_at),  # type: ignore[arg-type]
+                    resolved_at=None,
+                    resolved_by=row.resolved_by,
+                    resolution_outcome=row.resolution_outcome,
+                )
+                for row in rows
+            ]
+
     async def close(self) -> None:
         await self._engine.dispose()

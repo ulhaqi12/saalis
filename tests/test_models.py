@@ -26,8 +26,8 @@ def test_agent_defaults():
 
 
 def test_agent_weight_bounds():
-    with pytest.raises(ValidationError):
-        Agent(name="bad", weight=1.5)
+    assert Agent(name="ok", weight=1.5).weight == 1.5
+    assert Agent(name="ok", weight=2.0).weight == 2.0
     with pytest.raises(ValidationError):
         Agent(name="bad", weight=-0.1)
 

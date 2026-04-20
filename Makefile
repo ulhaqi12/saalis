@@ -1,4 +1,4 @@
-.PHONY: install install-all test test-sidecar test-all lint lint-sidecar fmt typecheck typecheck-sidecar all
+.PHONY: install install-all test test-sidecar test-mcp test-all lint lint-sidecar lint-mcp fmt typecheck typecheck-sidecar typecheck-mcp all
 
 install:
 	uv sync --extra dev
@@ -12,7 +12,10 @@ test:
 test-sidecar:
 	uv run --package saalis-sidecar pytest sidecar/tests/ --tb=short
 
-test-all: test test-sidecar
+test-mcp:
+	uv run --package saalis-mcp pytest mcp/tests/ --tb=short
+
+test-all: test test-sidecar test-mcp
 
 lint:
 	uv run ruff check src tests
@@ -20,9 +23,12 @@ lint:
 lint-sidecar:
 	uv run ruff check sidecar/src sidecar/tests
 
+lint-mcp:
+	uv run ruff check mcp/src mcp/tests
+
 fmt:
-	uv run ruff format src tests sidecar/src sidecar/tests
-	uv run ruff check --fix src tests sidecar/src sidecar/tests
+	uv run ruff format src tests sidecar/src sidecar/tests mcp/src mcp/tests
+	uv run ruff check --fix src tests sidecar/src sidecar/tests mcp/src mcp/tests
 
 typecheck:
 	uv run mypy
@@ -30,4 +36,7 @@ typecheck:
 typecheck-sidecar:
 	uv run --package saalis-sidecar mypy
 
-all: fmt lint lint-sidecar typecheck typecheck-sidecar test-all
+typecheck-mcp:
+	uv run --package saalis-mcp mypy
+
+all: fmt lint lint-sidecar lint-mcp typecheck typecheck-sidecar typecheck-mcp test-all
