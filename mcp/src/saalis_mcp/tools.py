@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from datetime import UTC
 from typing import Any
 from uuid import uuid4
 
@@ -64,7 +65,7 @@ async def handle_get_verdict(state: AppState, arguments: dict[str, Any]) -> str:
 
 
 async def handle_audit_query(state: AppState, arguments: dict[str, Any]) -> str:
-    from datetime import datetime, timezone
+    from datetime import datetime
 
     from saalis.models import AuditEventType
 
@@ -75,8 +76,8 @@ async def handle_audit_query(state: AppState, arguments: dict[str, Any]) -> str:
     limit: int = int(arguments.get("limit", 100))
 
     event_type = AuditEventType(event_type_raw) if event_type_raw else None
-    since_dt = datetime.fromisoformat(since).replace(tzinfo=timezone.utc) if since else None
-    until_dt = datetime.fromisoformat(until).replace(tzinfo=timezone.utc) if until else None
+    since_dt = datetime.fromisoformat(since).replace(tzinfo=UTC) if since else None
+    until_dt = datetime.fromisoformat(until).replace(tzinfo=UTC) if until else None
 
     events = await state.audit_store.query(
         event_type=event_type,

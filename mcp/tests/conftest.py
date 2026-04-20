@@ -1,10 +1,10 @@
 from __future__ import annotations
 
 import pytest
-
 from saalis.arbitrator import Arbitrator
 from saalis.audit.sqlite import SQLiteAuditStore
 from saalis.strategy import DeferToHuman, WeightedVote
+
 from saalis_mcp.state import AppState
 
 
