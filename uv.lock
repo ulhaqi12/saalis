@@ -1279,7 +1279,7 @@ wheels = [
 
 [[package]]
 name = "saalis"
-version = "0.1.0"
+version = "0.2.0"
 source = { editable = "." }
 dependencies = [
     { name = "aiosqlite" },
@@ -1315,7 +1315,7 @@ provides-extras = ["dev"]
 
 [[package]]
 name = "saalis-mcp"
-version = "0.1.0"
+version = "0.2.0"
 source = { editable = "mcp" }
 dependencies = [
     { name = "mcp" },
@@ -1345,7 +1345,7 @@ provides-extras = ["dev"]
 
 [[package]]
 name = "saalis-sidecar"
-version = "0.1.0"
+version = "0.2.0"
 source = { editable = "sidecar" }
 dependencies = [
     { name = "fastapi" },
